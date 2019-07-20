@@ -1,0 +1,1 @@
+select p.product_id, pt.description from product p inner join product_type pt on pt.product_type_id = p.product_type_id
