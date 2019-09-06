@@ -90,3 +90,26 @@ CREATE OR REPLACE TRIGGER SZABOLCS.PRODUCT_TRG2
     /
     
     
+DECLARE 
+    v_product_type_id product_type.product_type_id%type;
+    v_product_type_count number;
+    cursor c_product_type is select * from product_type pt;
+    v_product_id_counter PLS_INTEGER;
+BEGIN
+    DELETE FROM product;
+    DELETE FROM product_type;
+    FOR i IN 1 .. 100 LOOP
+        INSERT INTO product_type (PRODUCT_TYPE_ID, DESCRIPTION)
+        VALUES('PT'||i, 'DESC '|| i);
+    END LOOP;
+    v_product_id_counter := 1;
+    FOR v_product_type in c_product_type LOOP
+        FOR i IN 1 .. DBMS_RANDOM.VALUE(1, 100) LOOP
+            INSERT INTO PRODUCT (PRODUCT_ID, PARENT_PRODUCT_ID, PRODUCT_TYPE_ID, NAME, DESCRIPTION) VALUES('P'||v_product_id_counter, NULL, v_product_type.product_type_id, 'NAME'||v_product_id_counter, 'DESC'||v_product_id_counter);
+            v_product_id_counter := v_product_id_counter + 1;
+        END LOOP;
+    END LOOP;
+    COMMIT;
+END;
+/
+
