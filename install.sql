@@ -89,6 +89,39 @@ CREATE OR REPLACE TRIGGER SZABOLCS.PRODUCT_TRG2
     END;
     /
     
+CREATE INDEX SZABOLCS.IDX_PRODUCT_PARENT_PRODUCT_ID ON SZABOLCS.PRODUCT (PARENT_PRODUCT_ID);
+/
+
+CREATE BITMAP INDEX SZABOLCS.IDX_PRODUCT_PRODUCT_TYPE_ID ON SZABOLCS.PRODUCT (PRODUCT_TYPE_ID);
+/
+
+CREATE OR REPLACE VIEW SZABOLCS.V_PRODUCT_COUNTS AS
+SELECT /*+ use_nl(pt, p) index(p, idx_product_product_type_id) */ 
+       pt.product_type_id, pt.description, count(*) product_count
+  FROM product_type pt INNER JOIN product p ON p.product_type_id = pt.product_type_id
+  GROUP BY pt.product_type_id, pt.description
+  ORDER BY pt.product_type_id;
+  /
+
+DROP PUBLIC SYNONYM V_PRODUCT_COUNTS;
+/
+
+CREATE PUBLIC SYNONYM V_PRODUCT_COUNTS FOR SZABOLCS.V_PRODUCT_COUNTS;
+/
+    
+
+CREATE OR REPLACE VIEW SZABOLCS.V_MISSING_PRODUCTS AS 
+select distinct pt.product_type_id 
+  from product_type pt left outer join product p on p.product_type_id = pt.product_type_id
+ where p.product_id is null
+ order by pt.product_type_id;
+ /
+ 
+DROP PUBLIC SYNONYM V_MISSING_PRODUCTS;
+/
+
+CREATE PUBLIC SYNONYM V_MISSING_PRODUCTS FOR SZABOLCS.V_MISSING_PRODUCTS;
+/
     
 DECLARE 
     v_product_type_id product_type.product_type_id%type;
@@ -98,15 +131,17 @@ DECLARE
 BEGIN
     DELETE FROM product;
     DELETE FROM product_type;
-    FOR i IN 1 .. 100 LOOP
+    FOR i IN 1 .. 1000 LOOP
         INSERT INTO product_type (PRODUCT_TYPE_ID, DESCRIPTION)
         VALUES('PT'||i, 'DESC '|| i);
     END LOOP;
     v_product_id_counter := 1;
     FOR v_product_type in c_product_type LOOP
-        FOR i IN 1 .. DBMS_RANDOM.VALUE(1, 100) LOOP
-            INSERT INTO PRODUCT (PRODUCT_ID, PARENT_PRODUCT_ID, PRODUCT_TYPE_ID, NAME, DESCRIPTION) VALUES('P'||v_product_id_counter, NULL, v_product_type.product_type_id, 'NAME'||v_product_id_counter, 'DESC'||v_product_id_counter);
-            v_product_id_counter := v_product_id_counter + 1;
+        FOR i IN 1 .. ROUND(DBMS_RANDOM.VALUE(1, 1000)) LOOP
+            IF ROUND(DBMS_RANDOM.VALUE(1, 2)) = 2 THEN
+                INSERT INTO PRODUCT (PRODUCT_ID, PARENT_PRODUCT_ID, PRODUCT_TYPE_ID, NAME, DESCRIPTION) VALUES('P'||v_product_id_counter, NULL, v_product_type.product_type_id, 'NAME'||v_product_id_counter, 'DESC'||v_product_id_counter);
+                v_product_id_counter := v_product_id_counter + 1;
+            END IF;
         END LOOP;
     END LOOP;
     COMMIT;

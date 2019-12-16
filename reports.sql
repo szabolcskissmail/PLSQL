@@ -13,3 +13,10 @@ select product_type_id, round(100*(count(*) / sum(count(*)) over ()),2) perc fro
 
 
 desc product;
+
+select * from V_PRODUCT_COUNTS
+
+select * from v_missing_products
+ 
+
+ 
